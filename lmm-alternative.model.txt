@@ -1,0 +1,26 @@
+model {
+
+for(k in 1:K){ # prior for beta
+	beta[k] ~ dnorm(0,0.001)
+}	
+
+tau.e ~ dgamma(0.001,0.001) # prior for the within group variance
+sigma.e <- 1/sqrt(tau.e)
+
+tau.b0 ~ dgamma(0.001,0.001) # prior variance for the between group variance
+sigma.b0 <- 1/sqrt(tau.b0)
+
+# Statistical (conditional) model
+for (j in 1:G) {
+
+  b0[j] ~ dnorm(0, tau.b0) # random intercept for each ranked player
+}
+
+for(i in 1:n){ # likelihood function !!
+  mu[i] <- beta[1] + b0[player[i]] + beta[2] * shot_distance[i] + beta[3] * shot_angle[i] + beta[4] *   bodypart[i] + beta[5] * technique[i] + beta[6] * first_touch[i] + beta[7] * prefered_type[i] + 
+  beta[8] * inside_18[i] + beta[9] * time[i]
+  y[i] ~ dbin(p[i], 1)  # Likelihood function with binomial distribution
+  p[i] <- 1 / (1 + exp(-mu[i]))  # Link function (logit)
+
+}
+
