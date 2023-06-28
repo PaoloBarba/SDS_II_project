@@ -1,13 +1,13 @@
 
 model {
   for (k in 1:K) { 
-    beta[k] ~ dnorm(0, 0.001)
+    beta[k] ~ dnorm(0, 1000)
   }
 
-  tau.e ~ dgamma(9, .5)
+  tau.e ~ dgamma(.5, .5)
   sigma.e <- 1 / sqrt(tau.e)
 
-  tau.b0 ~ dgamma(9, .5)
+  tau.b0 ~ dgamma(.5, .5)
   sigma.b0 <- 1 / sqrt(tau.b0)
 
   for (j in 1:G) {
