@@ -1,0 +1,27 @@
+model { 
+  for(k in 1:K){ # prior for beta
+	beta[k] ~ dnorm(0,0.001)
+}	
+
+  tau.b0 ~ dgamma(0.1,0.1) # prior variance for the between group variance
+  sigma.b0 <- 1/sqrt(tau.b0)
+
+   
+  # Statistical (conditional) model
+  for (j in 1:G) {
+
+     b0[j] ~ dnorm(0, 0.01) # random intercept for each ranked player
+}
+
+  for (i in 1:n) {
+    mu[i] <- beta[1] + b0[player[i]] + beta[2] * shot_distance[i] +
+             beta[3] * shot_angle[i] + beta[4] * bodypartLeft_Foot[i] +
+             beta[5] * bodypartOther_Bodypart[i] + beta[6] * bodypartRight_Foot[i] +
+             beta[7] * techniqueVolley[i] + beta[8] * first_touchTrue[i] +
+             beta[9] * prefered_typeLeft_Foot[i] + beta[10] * prefered_typeRight_Foot[i] +
+             beta[11] * inside_18True[i] + beta[12] * time[i]
+    p[i] <- 1 / (1 + exp(-mu[i]))
+    y[i] ~ dbern(p[i])
+   
+  }
+}

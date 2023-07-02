@@ -14,10 +14,9 @@ barplot(prop.table(table(shots$goal)), col = c('red','green'))
 length(unique(shots$player))
 length(shots$player)
 barca_shot <- shots[shots$team == "Barcelona",]
-
-
-
-
+barca_shot$goal <- as.integer(factor(barca_shot$goal))
+distance_class <- factor(cut(barca_shot$shot_distance , breaks = c(0,10,20,30,40)))
+plot(distance_class[ barca_shot$goal == 1])
 
 
 
@@ -51,21 +50,20 @@ G <- length(unique(barca_shot$player))
 K <- length(fixef(model))
 
 # Write JAGS model specification to a file
-model_code <- "
-model {
-  for (k in 1:K) { 
-    beta[k] ~ dnorm(0, 1000)
-  }
+cat("model { 
+  for(k in 1:K){ # prior for beta
+	beta[k] ~ dnorm(0,0.001)
+}	
 
-  tau.e ~ dgamma(.5, .5)
-  sigma.e <- 1 / sqrt(tau.e)
+  tau.b0 ~ dgamma(0.1,0.1) # prior variance for the between group variance
+  sigma.b0 <- 1/sqrt(tau.b0)
 
-  tau.b0 ~ dgamma(.5, .5)
-  sigma.b0 <- 1 / sqrt(tau.b0)
-
+   
+  # Statistical (conditional) model
   for (j in 1:G) {
-    b0[j] ~ dnorm(0, tau.b0)
-  }
+
+     b0[j] ~ dnorm(0, 0.01) # random intercept for each ranked player
+}
 
   for (i in 1:n) {
     mu[i] <- beta[1] + b0[player[i]] + beta[2] * shot_distance[i] +
@@ -75,27 +73,28 @@ model {
              beta[9] * prefered_typeLeft_Foot[i] + beta[10] * prefered_typeRight_Foot[i] +
              beta[11] * inside_18True[i] + beta[12] * time[i]
     p[i] <- 1 / (1 + exp(-mu[i]))
+    y[i] ~ dbern(p[i])
+   
   }
-}"
+}" , file = "paolo.txt" , fill = TRUE ) 
 
-# Save JAGS model specification to a file
-writeLines(model_code, "lmm.model.txt")
 
-# Set initial values for JAGS
-inits <- list(list(b0 = t(ranef(model)$player)[1:G],
-                   beta = as.numeric(fixef(model)),
-                   tau.e = 1,
-                   tau.b0 = 1)
-)
+
+# Set initial values for JAgs
+inits <- function(){list("b0" = t(ranef(model)$player)[1:G],
+                         "beta" = as.numeric(fixef(model)),
+                         "tau.b0" = 3)}
 
 # Define parameters to save
-params <- c("beta", "sigma.e", "sigma.b0", "b0")
+params <- c("beta", "sigma.b0", "b0")
 
+length(player)
 # Prepare data for JAGS
 data.input <-  list(n = n,
                     K = K,
                     G = G,
-                    y = as.numeric(as.factor(barca_shot$goal)),
+                    y = barca_shot$goal - 1,
+                    #intercept = X$X.Intercept,
                     shot_distance = X$shot_distance,
                     shot_angle = X$shot_angle,
                     bodypartLeft_Foot = X$bodypartLeft.Foot,
@@ -110,24 +109,16 @@ data.input <-  list(n = n,
                     player = player
 )
 
+load("model_jags.RData")
 
-# Run JAGS model
-true.model.jags <- jags(
-  data = data.input,
-  inits = inits,
-  parameters.to.save = params,
-  model.file = "lmm.model.txt",
-  DIC = FALSE,
-  n.chains = length(inits),
-  n.iter = 20000,
-  n.burnin = 1100,
-  n.thin = 2
-)
+
+
+
 
 
 random_beta <- matrix(NA , nrow = 9450 , ncol = G)
 fixed_beta <- matrix(NA, nrow = 9450, ncol = K)
-for ( i in 1:groups){
+for ( i in 1:G){
   random_beta[,i] <- true.model.jags$BUGSoutput$sims.array[, 1, paste0("b0[",i,']')]
 }
 for (i in 1:K){
@@ -154,15 +145,11 @@ library(tidyverse)
 
 df_long <- reshape2::melt(fixed_beta)
 
-ggplot(df_long, aes(x = value, fill = variable)) +
+ggplot(df_long, aes(x = value, fill = Var2)) +
   geom_density(alpha = 0.5) +
-  facet_wrap(~ variable, ncol = 1, scales = "free_y") +
+  facet_wrap(~ Var2, ncol = 1, scales = "free_y") +
   theme_minimal() +
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
 
 
-
-
-
-
-
+plot(cumsum(random_beta$X14) / (1:9450) )
