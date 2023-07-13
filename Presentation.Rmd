@@ -1,0 +1,213 @@
+---
+title: Quantifying the effects of individual player on goal scoring through a Bayesian
+author: "Barba Paolo"
+date: "July 3, 2023"
+output:
+  beamer_presentation:
+    theme: "CambridgeUS"  # Choose a Beamer theme
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(lme4)
+library(R2jags)
+load('shots.RData')
+```
+
+## Introduction (1)
+
+Nowdays, football clubs have started to analyze advanced
+metric for player performance analysis that can lead in
+
+- player scouting
+- decision making of player’s contract.
+
+
+## Introduction (2)
+
+
+While comparing teams or player, the expected goal metric provides a
+good statistic in the tactical match analysis. 
+
+The xG model is a probabilistic model that assign score between 0 and 1 from any
+observed shot in a match. The model has development using
+event-level football data from StatsBomb’s data.
+
+Usually, xG models do not account fot the players
+who take the shots, and this assumptions does not seem suit-
+able, since the player’s skill could influence the succes of shot-
+conversion. 
+
+##  Dataset
+
+The data are collected by tracking players over the course of
+football matchs and recording their actions such shots, passes
+or others. For the xG model the data were taken from the
+shot event. These data, collected from StatsBomb are spatially manipulated in order
+to colecct relevan informations of the shots
+
+
+
+## Slide with Plot
+
+
+#TODO mettere la immagine del plot
+
+## ## Aim 
+
+
+The aim of the analysis is to understand:
+
+- The variables that can influence the shots result
+- If the player' skill influence the shot results 
+
+Before going any further on the analysi, it is need to describe the variables that we are going to use for conducting this analysis
+
+## Dataset description 
+
+The dataset is composed by ... variable and ... observations that reppresent shots of different $42$ player of Barcelona F.C.
+
+```{r dataset description}
+barca_shot <- shots[shots$team == "Barcelona",]
+head(barca_shot)
+```
+
+
+## Explanatory Analysis
+
+
+```{r Bar plot of goal}
+
+barplot(prop.table(table(barca_shot$goal)),
+        main = "Bar plot of shots results",
+        names.arg = c("No score","Score")
+        )
+
+```
+
+
+## Explanatory Analysis (2)
+
+```{r plot number of goal vs distance}
+barca_shot$goal <- as.integer(factor(barca_shot$goal))
+distance_class <- factor(cut(barca_shot$shot_distance , breaks = c(0,5,10,15,20,25,30)))
+plot(distance_class[ barca_shot$goal == 1], main = "Number of goal per distance class",
+     xlab = "Distance class" , ylab = "Number of goal")
+```
+
+
+## TODO Titolo
+
+A reasonable assumption is that player has a unique type of
+shooting. Therefore, given a player, the shots are inerehntly
+correlate to each each other and behave indipendently form the
+shot of another player. This introduces within-player correla-
+tions (event-level data is longitudinal data). As a result, every
+shot is essentially grouped or nested under a player. Therefore,
+models need to be fed information about the hierarchical struc-
+ture, otherwise it may lead to biased infe
+
+
+## Example of the hierarchical structure
+
+TODO mettere l'immagine..
+
+
+## Model specification
+
+
+For targeting the target variable, two models are choosen.
+
+- GLM do not fed information about the hierarchical structure
+- GLMM  do fed information about the hierarchical structure
+
+## Generalized linear model specifications
+
+$$g(\pi_i) = \beta_0 + \beta_1 x_1 + \cdots + \beta_p x_p$$
+where the $g$ is the logit link function and the $\pi_i$ is the odds for a goal $\frac{Pr(Y = 1)}{Pr(Y = 0)}$.
+
+## Generalized linear mixed model specifications
+
+In order to fed the information about the players structure a Linear mixed effect model only with a random intercept it is choosen. 
+
+Let us define the equation of the model and some basic notion:
+
+
+$$g(\pi_{i,j}) = \beta_0 + \beta_1 x_{i,j,1} + \beta_2 x_{i,j,2} \cdots \beta_p x_{i,j,p} + \delta_j $$
+\begin{itemize}
+    \item $g = 1,2, \dots 42$ number of players
+    \item $i = 1 \dots n_g$ Number of shots done by the $g-th$ player
+    \item $\pi{_i,g} =  $  probability of score from  the $i-th$ shot and the $g-th$ player
+    \item $\pi_g$ = odds ratio of scoring for the $g-th$ player. $\in (n_g \times 1)$
+\end{itemize}
+
+
+## Dimensionality of the parameters
+
+Let us define the dimensionality for the model:
+
+\begin{itemize}
+    \item $X_{g,i} \in (k \times 1)$ where $k$ is the number of predictors
+    \item $\underline{\beta} \in (k \times 1)$ can be considered as a vector of fixed effect since it does not depend on the player.
+    \item  $\delta{j}$ represent the random effect linked to the g-th player
+    \item The vector $\underline{\epsilon_{g}}$ is the vector of error terms.
+\end{itemize}
+
+
+## Sampling model assumptions
+
+The $\epsilon_g$ indipendent $b_g \forall g = 1 \cdots 42$
+The $b_g$ are noramlly distribuited with their own variance
+The $\epsilon_g$ are noramally distribuited
+
+Conditionally on the group effect, the probability of scoring 
+can be considered independent since we are deleting their common factors.
+
+
+## Remarks
+
+- Interpretation of the coefficients
+
+- Uninformative priors
+
+- Significant level
+
+
+## Beta coefficient
+
+todo
+
+## Poterior Analysis Distribution of the beta coefficient
+
+todo
+
+## Convergency of the beta variable
+
+todo
+## Player impact on goal
+
+todo
+## Model comparison via DIC
+
+\begin{align*}
+\begin{cases}
+H_0 : \sigma_{b_0} = 0\\
+H_1 : \sigma_{b_0} > 0
+\end{cases}
+\end{align*}
+
+
+Since the DIC the GLM is lower than the DIC of the GLMM , it is possible to claim that data do not show enough evidence in order to rejcet the null hypothesis.
+
+So we can conlcude that the assumptions of the hierarchical structure does not fit with this data
+
+
+## Discussion
+
+todo
+
+## References
+
+todo
+
+
