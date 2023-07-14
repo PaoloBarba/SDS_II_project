@@ -13,6 +13,8 @@ distance_class <- factor(cut(barca_shot$shot_distance , breaks = c(0,10,20,30,40
 plot(distance_class[ barca_shot$goal == 1])
 # Model -----------------------------------------------------------------------------------------------------------------------------------------
 # Convert player variable to numeric factor
+idx <- sample(dim(barca_shot)[1], 1000, replace = TRUE)
+barca_shot <- barca_shot[idx,]
 player <- as.numeric(as.factor(barca_shot$player))
 # Create design matrix X
 attach(barca_shot)
@@ -43,9 +45,7 @@ n <- nrow(barca_shot)
 G <- length(unique(barca_shot$player))
 K <- length(fixef(model))
 # Set initial values for JAgs
-inits <- function(){list("b0" = t(ranef(model)$player)[1:G],
-                         "beta" = as.numeric(fixef(model)),
-                         "tau.b0" = 3)}
+inits <- list("beta" = list(beta =  as.numeric(linear_model$coefficients)))
 
 # Define parameters to save
 params <- c("beta")
@@ -68,16 +68,27 @@ data.input <-  list(n = n,
                     prefered_typeRight_Foot = X$prefered_typeRight.Foot,
                     inside_18True = X$inside_18True,
                     time = X$time
-                    #player = player
+                   # player = player
 )
 
 
 
-load("Rdata/model_jags.RData")
-load("Rdata/jags_linear_model.RData")
+#load("Rdata/model_jags.RData")
+#load("Rdata/jags_linear_model.RData")
 
+true.model.jags <- jags(
+  data = data.input,
+  inits = inits,
+  parameters.to.save = params,
+  model.file = "txt_data/GLM.txt",
+  DIC = TRUE,
+  n.chains = length(inits),
+  n.iter = 10000,
+  n.burnin = 1100,
+  n.thin = 2
+)
 
-
+save(true.model.jags , file = "Rdata/glm.jags_model.RData" )
 random_beta <- matrix(NA , nrow = 9450 , ncol = G)
 fixed_beta <- matrix(NA, nrow = 9450, ncol = K)
 for ( i in 1:G){
