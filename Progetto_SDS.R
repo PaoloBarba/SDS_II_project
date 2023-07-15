@@ -16,6 +16,10 @@ plot(distance_class[ barca_shot$goal == 1])
 idx <- sample(dim(barca_shot)[1], 1000, replace = TRUE)
 barca_shot <- barca_shot[idx,]
 player <- as.numeric(as.factor(barca_shot$player))
+
+factor_playe <- as.factor(barca_shot$player)
+
+levels(factor_playe <- as.factor(barca_shot$player))
 # Create design matrix X
 attach(barca_shot)
 X <- model.matrix(~ 1 + shot_distance  + shot_angle + bodypart + technique + first_touch +
@@ -89,8 +93,8 @@ true.model.jags <- jags(
 )
 
 save(true.model.jags , file = "Rdata/glm.jags_model.RData" )
-random_beta <- matrix(NA , nrow = 9450 , ncol = G)
-fixed_beta <- matrix(NA, nrow = 9450, ncol = K)
+random_beta <- matrix(NA , nrow = 4450 , ncol = G)
+fixed_beta <- matrix(NA, nrow = 4450, ncol = K)
 for ( i in 1:G){
   random_beta[,i] <- true.model.jags$BUGSoutput$sims.array[, 1, paste0("b0[",i,']')]
 }
@@ -106,23 +110,8 @@ random_beta <- data.frame(random_beta)
 
 
 #####
-library(ggplot2)
-library(tidyverse)
+rm(list = ls())
+load("Rdata/glmm.jags_model.RData")
+library(ggmcmc)
 
-
-# Assuming df is your dataframe with multiple distributions
-
-# Reshape the dataframe into a long format
-# Create the density plot with facet_wrap
-
-df_long$variable
-df_long <- reshape2::melt(fixed_beta)
-
-ggplot(df_long, aes(x = value, fill = variable)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~ variable, ncol = 1, scales = "free_y") +
-  theme_minimal() +
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
-
-
-plot(1:length(fixed_beta$Beta.2),cumsum(fixed_beta$Beta.2 ) / (1:length(fixed_beta$Beta.2)) )
+ggmcmc(ggs(as.mcmc(true.model.jags)))

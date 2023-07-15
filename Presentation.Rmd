@@ -47,17 +47,18 @@ conversion.
 The aim of the analysis is to understand:
 
 - The variables that can influence the shots result
-- If the player' skill influence the shot results 
+- If there is a hierarchical structure behind the shots
+- Estimate the player effect on goal scoring
 
-Before going any further on the analysi, it is need to describe the variables that we are going to use for conducting this analysis
+Before going any further on the analysi, it is needed to describe the variables that we are going to use for conducting this analysis
 
 ##  Dataset
 
 The data are collected by tracking players over the course of
 football matchs and recording their actions such shots, passes
 or others. For the xG model the data were taken from the
-shot event. These data, collected from StatsBomb are spatially manipulated in order
-to colecct relevant informations of the shots
+shot event. These data, collected from StatsBomb, are spatially manipulated in order
+to extrapolate relevant informations for the score prediction.
 
 
 
@@ -70,7 +71,7 @@ to colecct relevant informations of the shots
 
 ## Dataset description 
 
-The dataset is composed by 13 variable and 7437 observations that reppresent shots of different $42$ player of Barcelona F.C.
+The dataset is composed by 13 variables and 7437 observations that reppresent shots of different $40$ player of Barcelona F.C.
 
 - Three continuous predictors: shot-taker’s distance to goal,
 angle of shot and time.
@@ -106,12 +107,10 @@ plot(distance_class[ barca_shot$goal == 1], main = "Number of goal per distance 
 
 A reasonable assumption is that player has a unique type of
 shooting. Therefore, given a player, the shots are inerehntly
-correlate to each each other and behave indipendently form the
-shot of another player. This introduces within-player correla-
-tions (event-level data is longitudinal data). As a result, every
-shot is essentially grouped or nested under a player. Therefore,
-models need to be fed information about the hierarchical struc-
-ture, otherwise it may lead to biased infe
+correlate to each other and behave indipendently from the
+shot of another players. This introduces within-player correla-
+tions. As a result, every shot is essentially grouped under a player. Therefore,
+models need to be fed information about the hierarchical structure, otherwise it may lead to biased inference.
 
 
 ## Example of the hierarchical structure
@@ -177,11 +176,10 @@ can be considered independent since we are deleting their common factors.
 ## Poterior Analysis Distribution of the beta coefficient
 
 ```{r beta coef , warning=FALSE , echo=FALSE , comment=FALSE, fig.height=5.6}
-load("Rdata/model_jags.RData")
-# Reshape the dataframe into a long format
-# Create the density plot with facet_wrap
+load("Rdata/glmm.jags_model.RData")
+load("Rdata/glm.jags_model.RData")
 
-#df_long <- reshape2::melt(fixed_beta)
+# Reshape the dataframe into a long format
 load("Rdata/df_long.RData")
 
 
@@ -189,10 +187,8 @@ ggplot(df_long, aes(x = value, fill = variable)) +
   geom_density(alpha = 0.5) +
   facet_wrap(~ variable, ncol = 1, scales = "free_y") +
   theme_minimal() +
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
-
-
-#plot(1:length(fixed_beta$Beta.2),cumsum(fixed_beta$Beta.2 ) / (1:length(fixed_beta$Beta.2)) )
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  xlim(-5,5)
 ```
 
 
@@ -205,19 +201,19 @@ ggplot(df_long, aes(x = value, fill = variable)) +
     
 \begin{tabular}{|l|l|}
 \hline
-Predictors              & Effects \\ \hline
-$\beta_{1}$: Intercept                & -1.5087   \\ \hline
-$\beta_{2}$: shot\_distance           & -0.184  \\ \hline
-$\beta_{3}$: shot\_angle              & 0.0011   \\ \hline
-$\beta_{4}$: bodypartLeft Foot        & 1.385   \\ \hline
-$\beta_{5}$: bodypartOther Bodypart   & 0.4860   \\ \hline
-$\beta_{6}$: bodypartRight Foot       &  1.3539   \\ \hline
-$\beta_{7}$: techniqueVolley         & -0.579  \\ \hline
-$\beta_{8}$: first\_touchTrue       &  0.1215  \\ \hline
-$\beta_{9}$: prefered\_typeLeft Foot & 10.078   \\ \hline
-$\beta_{10}$: prefered\_typeRight Foot & 0.523   \\ \hline
-$\beta_{11}$: inside\_18True          & -0.615  \\ \hline
-$\beta_{12}$: time              & 0.0021   \\ \hline
+Predictors              & Mean posterior distribution \\ \hline
+$\beta_{1}$: Intercept                & -10.933   \\ \hline
+$\beta_{2}$: shot\_distance           & -0.1548  \\ \hline
+$\beta_{3}$: shot\_angle              & -0.0010   \\ \hline
+$\beta_{4}$: bodypartLeft Foot        & 1.481   \\ \hline
+$\beta_{5}$: bodypartOther Bodypart   & -24.49   \\ \hline
+$\beta_{6}$: bodypartRight Foot       &  1.7626   \\ \hline
+$\beta_{7}$: techniqueVolley         & -0.712  \\ \hline
+$\beta_{8}$: first\_touchTrue       &  0.077  \\ \hline
+$\beta_{9}$: prefered\_typeLeft Foot & 7.394   \\ \hline
+$\beta_{10}$: prefered\_typeRight Foot &  7.87   \\ \hline
+$\beta_{11}$: inside\_18True          & -0.639  \\ \hline
+$\beta_{12}$: time              & 0.0081  \\ \hline
 \end{tabular}
 \end{center}
 
@@ -227,8 +223,15 @@ $\beta_{12}$: time              & 0.0021   \\ \hline
 
 ## Player impact on goal
 
-todo
+The random effetct associated to each player can be seen as a measuere of player inpact on goal,
+a positive random effect for player means more likelihood that a shot will end up in a score.
+
+![posteririor distribution of random effet for Anssumane Fati](img/assume_fati.png){width=50%}
+![posteririor distribution of random effet for Ousmane Dembélé](img/dembele_dist.png){width=50%}
+
 ## Model comparison via DIC
+
+
 
 \begin{align*}
 \begin{cases}
@@ -237,15 +240,29 @@ H_1 : \sigma_{b_0} > 0
 \end{cases}
 \end{align*}
 
+```{r comparison via dic}
+load("Rdata/glmm.jags_model.RData")
+paste("DIC GLMM:" , true.model.jags[["BUGSoutput"]][["DIC"]])
+load("Rdata/glm.jags_model.RData")
+paste("DIC GLM:" , true.model.jags[["BUGSoutput"]][["DIC"]])
+```
+
 
 Since the DIC the GLM is lower than the DIC of the GLMM , it is possible to claim that data do not show enough evidence in order to rejcet the null hypothesis.
 
 So we can conlcude that the assumptions of the hierarchical structure does not fit with this data
 
 
-## Discussion
+## DIAGNOSTIC
 
-todo
+![HPD Interval](img/HPD.png){width=40%}
+
+
+## DIAGNOSTIC (2)
+
+![GEWEKE](img/GEWEKE.png){width=40%}
+
+
 
 ## References
 
