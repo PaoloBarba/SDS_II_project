@@ -7,7 +7,9 @@ library(R2jags)
 # Dataset Description : 
 # The dataset is composed by 12843 observations (that reppresent an time momenti in a football match where the player has shoot).
 # The dataset stored shots of 12843 of La Liga
+
 barca_shot <- shots[shots$team == "Barcelona",]
+dim(barca_shot)
 barca_shot$goal <- as.integer(factor(barca_shot$goal))
 distance_class <- factor(cut(barca_shot$shot_distance , breaks = c(0,10,20,30,40)))
 plot(distance_class[ barca_shot$goal == 1])
@@ -112,6 +114,8 @@ random_beta <- data.frame(random_beta)
 #####
 rm(list = ls())
 load("Rdata/glmm.jags_model.RData")
+library(R2jags)
+library(coda)
 library(ggmcmc)
 
-ggmcmc(ggs(as.mcmc(true.model.jags)))
+ggmcmc(ggs(coda:::as.mcmc(true.model.jags)))
